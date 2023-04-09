@@ -29,6 +29,14 @@
 				"${workspaceFolder}/out/test/**/*.js"
 			],
 			"preLaunchTask": "${defaultBuildTask}"
+		},
+		{
+			"name": "Python: debug pyast",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/pyast.py",
+            "console": "integratedTerminal",
+            "justMyCode": true
 		}
 	]
 }
