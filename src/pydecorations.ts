@@ -1,6 +1,6 @@
 
 import * as vscode from 'vscode';
-const { exec } = require('child_process');
+import { exec } from 'child_process';
 
 export class PyDecorations {
 
@@ -9,6 +9,12 @@ export class PyDecorations {
     extensionPath : string = ".";
 
     rangesGlobal : vscode.DecorationOptions[] = [];
+    decoratesGlobal : vscode.TextEditorDecorationType = vscode.window.createTextEditorDecorationType({});
+
+    colorConfigs : any = {
+        'is_client' : '#00CC66',
+        'is_server' : '#FF6600',
+    };
 
     initExtensionPath(path: string) : void {
         this.extensionPath = path;
@@ -23,57 +29,20 @@ export class PyDecorations {
         this.onDidChangeActiveTextEditor(editor);
     }
 
-    // 是否需要标注
-    needDecoration(codes: string) : boolean {
-        if (codes.match(/Env\.is_client/gi)) {
-            return true;
-        }
-        if (codes.match(/Env\.is_server/gi)) {
-            return true;
-        }
-        return false;
-    }
-
     // 生成指定格式的标注
     generateDecoration(text: string) : vscode.DecorationInstanceRenderOptions {
         return {
             after: {
-              contentText: ` # ${text}`,
-              fontWeight: 'bold',
-              color: '#00ff00',
-            //   backgroundColor: '#713879',
-            //   color: '#713879', // 紫色
-            //   color: '#ffffff',
+                contentText: ` # ${text}`,
+                fontWeight: 'bold',
+                color : this.colorConfigs[text],
             },
         };
-    }
-
-    // 添加标注
-    insertDecoration(startIndex: number, endIndex: number, decorationText: string) : void {
-        const editor = vscode.window.activeTextEditor;
-        if (!editor) {
-            return;
-        }
-        const codes = editor.document.getText();
-        const regexDEF = /.*def\s+\w+/gm;
-    
-        let m;
-        while ((m = regexDEF.exec(codes.slice(startIndex, endIndex))) !== null) {
-            let line = editor.document.positionAt(startIndex + m.index);
-            this.rangesGlobal.push({
-                range: editor.document.lineAt(line).range,
-                renderOptions: this.generateDecoration(decorationText),
-            });
-        }
     }
 
     // 切文件后生成标注, todo: 使用cache
     onDidChangeActiveTextEditor(editor: vscode.TextEditor) {
         if (!editor?.document.fileName.match(/\\com\\/)) {
-            return;
-        }
-        let codes = editor?.document.getText();
-        if (!this.needDecoration(codes)) {
             return;
         }
 
@@ -84,9 +53,7 @@ export class PyDecorations {
                 return;
             }
             const linenos = JSON.parse(stdout);
-            console.log(editor.document.fileName);
             Object.entries(linenos).forEach(ele => {
-                console.log(ele);
                 ele[1].forEach(line => {
                     this.rangesGlobal.push({
                         range: editor.document.lineAt(line - 1).range,
@@ -95,15 +62,8 @@ export class PyDecorations {
                 });
             });
 
-            const todoStyle = {
-                isWholeLine: true,
-                // backgroundColor: '#264f78',
-                dark: {
-                    // gutterIconPath: path.join(__filename, '..', '..', 'images', 'up.png')
-                }
-            };
             const fontColorDecorator = vscode.window.createTextEditorDecorationType({});
-            editor.setDecorations(fontColorDecorator, this.rangesGlobal);
+            editor.setDecorations(this.decoratesGlobal, this.rangesGlobal);
             this.rangesGlobal = [];
           });
     }
