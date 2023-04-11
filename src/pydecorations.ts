@@ -4,11 +4,10 @@ import { exec } from 'child_process';
 
 export class PyDecorations {
 
-    name : string = "Plugin for python";
-
     extensionPath : string = ".";
 
     rangesGlobal : vscode.DecorationOptions[] = [];
+
     decoratesGlobal : vscode.TextEditorDecorationType = vscode.window.createTextEditorDecorationType({});
 
     colorConfigs : any = {
@@ -29,6 +28,13 @@ export class PyDecorations {
         this.onDidChangeActiveTextEditor(editor);
     }
 
+    isFileNeedDecoration(filePath: string) : boolean {
+        if (filePath.match(/\\cdata\\|const|gmcmd/i)) {
+            return false;
+        }
+        return filePath.match(/\\com\\/i) !== null;
+    }
+
     // 生成指定格式的标注
     generateDecoration(text: string) : vscode.DecorationInstanceRenderOptions {
         return {
@@ -40,14 +46,17 @@ export class PyDecorations {
         };
     }
 
-    // 切文件后生成标注, todo: 使用cache
+    // 切文件后生成标注
     onDidChangeActiveTextEditor(editor: vscode.TextEditor) {
-        if (!editor?.document.fileName.match(/\\com\\/)) {
+
+        if (!this.isFileNeedDecoration(editor.document.fileName)) {
             return;
         }
 
         // hack script path
-        exec(`python ${this.extensionPath}/src/pyast.py ${editor.document.fileName}`, (err: any, stdout: string, stderr: any) => {
+        // 拿到pyast解析的函数行号
+
+        exec(`python ${this.extensionPath}/src/pyast.py ${editor.document.fileName}`, (err: any, stdout: string) => {
             if (err) {
                 console.log(err);
                 return;
@@ -62,7 +71,6 @@ export class PyDecorations {
                 });
             });
 
-            const fontColorDecorator = vscode.window.createTextEditorDecorationType({});
             editor.setDecorations(this.decoratesGlobal, this.rangesGlobal);
             this.rangesGlobal = [];
           });
